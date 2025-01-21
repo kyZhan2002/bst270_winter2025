@@ -27,12 +27,8 @@ parse_args <- function() {
   
   # Inner join of the two tables
   merged_data = inner_join(da04652.0001, da29282.0001, by = c("M2ID", "M2FAMNUM"),suffix = c('','.2'))
-  
-  
-  # Save the merged data to the output file
-  # write.csv(merged_data, args$output_file, row.names = FALSE)
-  
-  
+  # save the intermediate table with the merged data
+  #write.csv(merged_data, args$intermediate_table, row.names = FALSE)
   
   source("../filter_optimism.R")
   data_after_optimism_filtering <- Filter_optimism(merged_data)

@@ -32,10 +32,19 @@ if (length(opt$args) < 2) {
 input_file <- opt$args[1]
 output_table <- opt$args[2]
 
-# Access optional parameters
-t1 <- opt$options$tertile1
-t2 <- opt$options$tertile2
+  # Access optional parameters
+  t1 <- opt$options$tertile1
+  t2 <- opt$options$tertile2
 
+if ((t1==0) & (t2==0)){
+  print("We compute tertiles now")
+    tertile1 <- quantile(df$B1SORIEN, 1/3)
+    tertile2 <- quantile(df$B1SORIEN, 2/3)
+} else {
+  # Access optional parameters
+  t1 <- opt$options$tertile1
+  t2 <- opt$options$tertile2
+}
 
 
 # Read the input files
