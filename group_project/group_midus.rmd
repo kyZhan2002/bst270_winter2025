@@ -291,6 +291,128 @@ source("generate_table1_confounding.R")
 generate_confounding_table1(full_data)
 ```
 
+```{r}
+
+library(dplyr)
+library(tidyr)
+# Helper function for formatting percentages and statistics
+format_table <- function(cont_tab) {
+    row_percents <- prop.table(cont_tab, margin = 1) * 100
+    col_percents <- prop.table(cont_tab, margin = 2) * 100
+    
+    formatted_table <- NULL
+    for(i in 1:nrow(cont_tab)) {
+        formatted_table <- rbind(
+            formatted_table,
+            col_percents[i, ],  # Column percentages
+            row_percents[i, ]   # Row percentages
+        )
+    }
+    # Create row names
+    row_labels <- rep(rownames(cont_tab), each = 2)
+    row_types <- rep(c("(Column %)", "(Row %)"), length(rownames(cont_tab)))
+    rownames(formatted_table) <- paste(row_labels, row_types)
+    
+    return(as.data.frame(formatted_table))
+}
+
+generate_confounding_table1 <- function(full_data) {
+    # Optimism categories
+    tertile1 <- quantile(full_data$B1SORIEN, 1/3)
+    tertile2 <- quantile(full_data$B1SORIEN, 2/3)
+    
+    full_data$optimism_category <- factor(case_when(
+        full_data$B1SORIEN < tertile1 ~ "low",
+        full_data$B1SORIEN >= tertile1 & full_data$B1SORIEN < tertile2 ~ "moderate",
+        full_data$B1SORIEN >= tertile2 ~ "high"
+    ), levels = c("low", "moderate", "high"))
+    
+    # Initialize final table
+    final_table <- data.frame(Variable = character(),
+                              Statistic = character(),
+                              Value = character())
+    
+    # Age summary
+    age_summary <- full_data %>% 
+        group_by(optimism_category) %>% 
+        summarize(mean_sd = sprintf("%.2f ± %.2f", mean(age), sd(age))) %>% 
+        pivot_longer(cols = everything(), names_to = "Statistic", values_to = "Value")
+    age_summary$Variable <- "Age"
+    final_table <- rbind(final_table, age_summary)
+    
+    # Education
+  # Assuming education_table is a matrix or data frame
+  education_table <- format_table(table(full_data$education_categorical, full_data$optimism_category))
+  
+  # Convert the matrix to a data frame for easier manipulation
+  education_df <- as.data.frame(as.table(as.matrix(education_table)))
+  
+  # Rename columns to match desired structure
+  colnames(education_df) <- c("Statistic", "Optimism_Category", "Value")
+  
+  # Add the `Variable` column to all rows
+  education_df <- education_df %>%
+    mutate(Variable = "Education")
+    final_table <- rbind(final_table, education_table)
+    
+    # Race
+    race_table <- format_table(table(full_data$race, full_data$optimism_category))
+    race_table <- tibble(Variable = "Race",
+                         Statistic = rownames(race_table),
+                         Value = as.character(unlist(race_table)))
+    final_table <- rbind(final_table, race_table)
+    
+    # Gender
+    gender_table <- format_table(table(full_data$sex, full_data$optimism_category))
+    gender_table <- tibble(Variable = "Gender",
+                           Statistic = rownames(gender_table),
+                           Value = as.character(unlist(gender_table)))
+    final_table <- rbind(final_table, gender_table)
+    
+    # Chronic condition
+    chronic_table <- format_table(table(full_data$chronic_condition, 
+                                        full_data$optimism_category))
+    chronic_table <- tibble(Variable = "Chronic Condition",
+                            Statistic = rownames(chronic_table),
+                            Value = as.character(unlist(chronic_table)))
+    final_table <- rbind(final_table, chronic_table)
+    
+    # Income and visit interval
+    interval_income_summary <- full_data %>% 
+        group_by(optimism_category) %>% 
+        summarize(
+            visit_interval = sprintf("%.2f ± %.2f", mean(visit_interval), sd(visit_interval)),
+            household_income = sprintf("%.2f ± %.2f", mean(household_income), sd(household_income))
+        ) %>% 
+        pivot_longer(cols = everything(), names_to = "Statistic", values_to = "Value")
+    interval_income_summary$Variable <- "Income and Visit Interval"
+    final_table <- rbind(final_table, interval_income_summary)
+    
+    # Blood pressure medication
+    bp_table <- table(full_data$blood_pressure_med, full_data$optimism_category)
+    bp_table <- format_table(bp_table)
+    bp_table <- tibble(Variable = "Blood Pressure Medication",
+                       Statistic = rownames(bp_table),
+                       Value = as.character(unlist(bp_table)))
+    final_table <- rbind(final_table, bp_table)
+    
+    # Negative affect
+    negative_affect_summary <- full_data %>% 
+        group_by(optimism_category) %>% 
+        summarize(mean_sd = sprintf("%.2f ± %.2f", 
+                                    mean(negative_affect), 
+                                    sd(negative_affect))) %>% 
+        pivot_longer(cols = everything(), names_to = "Statistic", values_to = "Value")
+    negative_affect_summary$Variable <- "Negative Affect"
+    final_table <- rbind(final_table, negative_affect_summary)
+    
+    return(final_table)
+}
+
+generate_confounding_table1(full_data)
+
+```
+
 Results are pretty similar, however we are unable to replicate the chronic conditions 
 results. We could not figure out how to process the data, because we use the same 
 variables they refer to in the paper, but the percentages are different.
